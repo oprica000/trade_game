@@ -1,0 +1,390 @@
+<html>
+    <head>
+        <title>Trade game</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.dev.js"></script>
+        <link rel="icon" href="./tab_icon.png">
+        
+        <style>
+            body{
+            margin-top: 30px;
+            }
+            li{
+                display:inline-block;
+            }
+            #messageArea{
+                display: none;
+            }
+            #sendOfferArea{
+                display: none;
+            }
+            #offerFormArea{
+                display: none;
+            }
+            #endGameArea{
+                display: none;
+            }
+
+        </style>
+
+    </head>
+    <body>
+        <div class="container">
+            <div id="userFormArea" class="row">
+                <div class="col-md-6">
+                    <form id="userForm">
+                        <div class="form-group">
+                            <label>Enter username</label>
+                            <input class="form-control" id="username"></textarea>
+                            <br />
+                            <input type="submit" class="btn btn-primary" value="Enter" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="sendOfferArea" class="container">
+                <div class="row">
+                <div class="col-md-4">
+                        <div class="form-group">
+                            <h4>Offer the other player</h4>
+                            <label id="offerFormDestination"></label>
+                            <br />
+                            <label id="label_wood"></label>
+                            <input class="form-control" id="trade_g_wood" value="0"></textarea>
+                            <br />
+                            <label id="label_stone"></label>
+                            <input class="form-control" id="trade_g_stone" value="0"></textarea>
+                            <br />
+                            <label id="label_iron"></label>
+                            <input class="form-control" id="trade_g_iron" value="0"></textarea>
+                            <br />
+                            <label id="label_wheat"></label>
+                            <input class="form-control" id="trade_g_wheat" value="0"></textarea>
+                            <br />
+                            <button id="btnSendOffer">Send offer</button>
+                            <button id="btnCancelOffer">Cancel</button>
+                        </div>
+                </div>
+                <div class="col-md-4">
+                        <div class="form-group">
+                            <h4>Demand from the other player</h4>
+                            <br />
+                            <label><img src="./wood.png" alt="Wood" width="32" height="32"></img></label>
+                            <input class="form-control" id="trade_r_wood" value="0"></textarea>
+                            <br />
+                            <label><img src="./stone.png" alt="Stone" width="32" height="32"></img></label>
+                            <input class="form-control" id="trade_r_stone" value="0"></textarea>
+                            <br />
+                            <label><img src="./iron.png" alt="Iron" width="32" height="32"></img></label>
+                            <input class="form-control" id="trade_r_iron" value="0"></textarea>
+                            <br />
+                            <label><img src="./wheat.png" alt="Wheat" width="32" height="32"></img></label>
+                            <input class="form-control" id="trade_r_wheat" value="0"></textarea>
+                            <br />
+                        </div>
+                        </div>
+                </div>
+            </div>
+
+            <div id="offerFormArea" class="row">
+                <div class="col-md-12">
+                    <label id="offerText"></label>
+                    <br/>
+                    <button id="btnAcceptOffer">Accept</button>
+                    <button id="btnRefuseOffer">Refuse</button>
+                    <br />
+                </div>
+            </div>
+
+            <div id="endGameArea" class="row">
+                <div class="col-md-5">
+                    <div class="well">
+                        <h1>Game over!</h1>
+                        <ul class="list-group" id="scoreboard"></ul>
+                    </div>
+                </div>
+            </div>
+
+    <div id="messageArea" class="container">
+        <div class="row">
+            <div class="col-md-5">
+                <h3>Your resources</h3>
+                <ul class="list-group" id="ownResources"></ul>
+                <ul class="list-group" id="totalResources"></ul>
+            </div>
+            <div class="col-md-3">
+                <h3><img src="./players.png" alt="Players" width="32" height="32"></img> Player list</h3>
+                <ul class="list-group" id="users" style="overflow-y:auto; height:200px;"></ul>
+            </div>
+            <div class="col-md-4">
+                <h3>Buildings</h3>
+                <ul class="list-group" id="ownBuildings" style="overflow-y:auto; height:200px;"></ul>
+            </div>
+        </div>
+                
+                <div class="col-md-16">
+                    <div>
+                        <h3><img src="./chat.png" alt="Chat" width="32" height="32"></img> Chat</h3>
+                        <div class="chat" id="chat" style="overflow-y:auto; height:200px;"></div>
+                        <form id="messageForm">
+                            <div class="form-group">
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="col-md-10">
+                                            <input class="form-control" id="message"></textarea>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="submit" class="btn btn-primary" value="Send Message" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+        </div>
+    </div>
+
+        <script>
+            $(function(){
+                var socket = io.connect();
+                var $messageForm = $('#messageForm');
+                var $message = $('#message');
+                var $chat = $('#chat');
+                var $messageFormArea = $('#messageArea');
+                var $userFormArea = $('#userFormArea');
+                var $userForm = $('#userForm');
+                var $users = $('#users');
+                var $username = $('#username');
+                var $ownResources = $('#ownResources');
+                var $totalResources = $('#totalResources');
+                var $sendOfferArea = $('#sendOfferArea');
+                var $offerFormArea = $('#offerFormArea');
+                var $offerText = $('#offerText');
+                var $offerFormDestination = $('#offerFormDestination');
+                var $btnSendOffer = $('#btnSendOffer');
+                var $btnCancelOffer = $('#btnCancelOffer');
+                var $trade_g_wood = $('#trade_g_wood');
+                var $trade_r_wood = $('#trade_r_wood');
+                var $trade_g_stone = $('#trade_g_stone');
+                var $trade_r_stone = $('#trade_r_stone');
+                var $trade_g_iron = $('#trade_g_iron');
+                var $trade_r_iron = $('#trade_r_iron');
+                var $trade_g_wheat = $('#trade_g_wheat');
+                var $trade_r_wheat = $('#trade_r_wheat');
+                var $btnRefuseOffer = $('#btnRefuseOffer');
+                var $btnAcceptOffer = $('#btnAcceptOffer');
+                var ownWood;
+                var ownStone;
+                var ownIron;
+                var ownWheat;
+                var ownPoints;
+                var isTaxBuilt = false;
+                var $ownBuildings = $('#ownBuildings');
+                var $scoreboard = $('#scoreboard');
+                var $endGameArea = $('#endGameArea');
+                var $label_wood = $('#label_wood');
+                var $label_stone = $('#label_stone');
+                var $label_iron = $('#label_iron');
+                var $label_wheat = $('#label_wheat');
+
+                socket.on('end game', function(data){
+                    var html = '';
+                    $scoreboard.html('<h3>Scoreboard</h3> <br />');
+                    for(i = 0; i < data.length; i++){
+                        html = '<li class="list-group-item"> <strong>' + (i + 1) + '.</strong> Name: ' + data[i].Username + ' - ' + (data[i].Points + data[i].Wood + data[i].Stone + data[i].Iron + data[i].Wheat) + ' points</li>';
+                        $scoreboard.append(html);
+                    }
+                    $messageFormArea.hide();
+                    $offerFormArea.hide();
+                    $userFormArea.hide(); 
+                    $endGameArea.show();
+                });
+
+                $userForm.submit(function(e){
+                    e.preventDefault();
+                    socket.emit('new user', $username.val(), function(data){
+                        if(data){
+                            $userFormArea.hide();
+                            $messageFormArea.show();
+                        }
+                    });
+                });
+
+                $btnSendOffer.on('click', function(){
+
+                    if(ownWood >= $trade_g_wood.val() && ownStone >= $trade_g_stone.val() && ownIron >= $trade_g_iron.val() && ownWheat >= $trade_g_wheat.val()){
+                        socket.emit('new offer', {destinationIndex: $offerFormDestination.val(), 
+                                                initiator_wood: ownWood, give_wood: $trade_g_wood.val(), get_wood: $trade_r_wood.val(), 
+                                                initiator_stone: ownStone, give_stone: $trade_g_stone.val(), get_stone: $trade_r_stone.val(),
+                                                initiator_iron: ownIron, give_iron: $trade_g_iron.val(), get_iron: $trade_r_iron.val(),
+                                                initiator_wheat: ownWheat, give_wheat: $trade_g_wheat.val(), get_wheat: $trade_r_wheat.val()});
+                        $trade_g_wood.val('0');
+                        $trade_r_wood.val('0');
+                        $trade_g_stone.val('0');
+                        $trade_r_stone.val('0');
+                        $trade_g_iron.val('0');
+                        $trade_r_iron.val('0');
+                        $trade_g_wheat.val('0');
+                        $trade_r_wheat.val('0');
+                        $sendOfferArea.hide();
+                        $messageFormArea.show();
+                    }else{
+                        var message = "You do not have";
+                        if(ownWood < $trade_g_wood.val()){
+                            message += ' ' + $trade_g_wood.val() + ' wood';
+                        }
+                        if(ownStone < $trade_g_stone.val()){
+                            message += ', ' + $trade_g_stone.val() + ' stone';
+                        }
+                        if(ownIron < $trade_g_iron.val()){
+                            message += ', ' + $trade_g_iron.val() + ' iron';
+                        }
+                        if(ownWheat < $trade_g_wheat.val()){
+                            message += ', ' + $trade_g_wheat.val() + ' wheat'; 
+                        }
+                        message +='.';
+                        alert(message);
+                    }
+                });
+
+                $btnCancelOffer.on('click', function(){
+                    $messageFormArea.show();
+                    $sendOfferArea.hide();
+                });
+
+                socket.on('show offer', function(data){
+                    $offerText.html('<img src="./tab_icon.png" alt="Exchange" width="48" height="48"></img> User ' + data.senderUsername + ' wants to trade ' + data.give_wood + ' <img src="./wood.png" alt="Wood" width="32" height="32"></img> | ' + data.give_stone + ' <img src="./stone.png" alt="Stone" width="32" height="32"></img> | ' + data.give_iron + ' <img src="./iron.png" alt="Iron" width="32" height="32"></img> | ' + data.give_wheat + ' <img src="./wheat.png" alt="Wheat" width="32" height="32"></img> <br /> &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp; <img src="./switch.png" alt="Switch" width="32" height="32"></img> <br /> &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp; for your ' + data.get_wood + ' <img src="./wood.png" alt="Wood" width="32" height="32"></img> | ' + data.get_stone + ' <img src="./stone.png" alt="Stone" width="32" height="32"></img> | ' + data.get_iron + ' <img src="./iron.png" alt="Iron" width="32" height="32"></img> | ' + data.get_wheat + ' <img src="./wheat.png" alt="Wheat" width="32" height="32"></img>');
+                    $offerText.val(data.senderUsername + ',' + data.initiator_wood + ',' + data.give_wood + ',' + ownWood + ',' + data.get_wood + ','
+                                                             + data.initiator_stone + ',' + data.give_stone + ',' + ownStone + ',' + data.get_stone + ','
+                                                             + data.initiator_iron + ',' + data.give_iron + ',' + ownIron + ',' + data.get_iron + ','
+                                                             + data.initiator_wheat + ',' + data.give_wheat + ',' + ownWheat + ',' + data.get_wheat);
+                    $offerFormArea.show();
+                    if(data.get_wood > ownWood || data.get_stone > ownStone || data.get_iron > ownIron || data.get_wheat > ownWheat){
+                        $btnAcceptOffer.attr('disabled', 'disabled');
+                    }else{
+                        $btnAcceptOffer.removeAttr('disabled', 'disabled');
+                    }
+                    //alert('trade alert');
+                });
+
+                $btnAcceptOffer.on('click', function(){
+                    socket.emit('offer accepted', $offerText.val());
+                    $offerText.html('');
+                    $offerFormArea.hide();
+                });
+
+                $btnRefuseOffer.on('click', function(){
+                    socket.emit('offer refused', $offerText.val());
+                    $offerText.val('');
+                    $offerText.html('');
+                    $offerFormArea.hide();
+                });
+
+                socket.on('show accept', function(data){
+                    alert('Offer accepted by ' + data);
+                });
+
+                socket.on('show refuse', function(data){
+                    alert('Offer refused by ' + data);
+                });
+
+                $messageForm.submit(function(e){
+                    e.preventDefault();
+                    socket.emit('send message', $message.val());
+                    $message.val('');
+                });
+
+                socket.on('inititalize chat', function(data){
+                    $chat.empty();
+                    for(i=0; i < data.length; i++){
+                        $chat.append('<div class="well"><strong>' + data[i].Username + '</strong>: ' + data[i].Message + '</div>');
+                    }
+                    $chat.scrollTop(100000);
+                });
+
+                socket.on('update own resources', function(data){
+                    $ownResources.empty();
+                    ownWood = data[0].Wood;
+                    ownStone = data[0].Stone;
+                    ownIron = data[0].Iron;
+                    ownWheat = data[0].Wheat;
+                    ownPoints = data[0].Points;
+                    $ownResources.append('<li><img src="./points.png" alt="Points" width="32" height="32"></img> : ' + ownPoints + '</li><br />');
+                    $ownResources.append('<li class="list-group-item">Owned: <img src="./wood.png" alt="Wood" width="32" height="32"></img> : ' + data[0].Wood + ' | <img src="./stone.png" alt="Stone" width="32" height="32"></img> : ' + data[0].Stone + ' | <img src="./iron.png" alt="Iron" width="32" height="32"></img> : ' + data[0].Iron + ' | <img src="./wheat.png" alt="Wheat" width="32" height="32"></img>: ' + data[0].Wheat + '</li>')
+                });
+
+                socket.on('update buildings', function(data){                    
+                    var html = '';
+                    $ownBuildings.html('');
+                    for(i = 0; i < data.length; i++){
+                        html = '<li class="list-group-item">' + '<img src="./buildings/' + data[i].Image + '.png" alt="' + data[i].Image + '" width="32" height="32"></img> ' + data[i].Name + '<br /> Wood: ' + data[i].WoodCost + ' Stone: ' + data[i].StoneCost + ' Iron: ' + data[i].IronCost + ' Wheat: ' + data[i].WheatCost + '<br /> Ability: ' + data[i].Ability + '<br /> Points: ' + data[i].PointReward + ' <button id="btnBuild_' + data[i].ID + '" type="button" value="' + data[i].ID + '">Build</button>' + '</li>\n';
+                        $ownBuildings.append(html);
+                        $('#btnBuild_' + data[i].ID).on('click', function(){
+                            //to add build
+                            socket.emit('build', $(this).val());
+                        });
+                    }
+                });
+
+                socket.on('finalize build', function(data){
+                    $('#btnBuild_' + data).html('<img src="./building_completed.png" alt="Points" width="20" height="20"></img>');
+                    $('#btnBuild_' + data).attr('disabled', 'disabled');
+                    if(data == 11){
+                        isTaxBuilt = true;
+                    }
+                });
+
+                socket.on('refuse build', function(){
+                    alert('Not enough resources!');
+                });
+
+                socket.on('check tax', function(data){
+                    if(isTaxBuilt == true && socket.id != data){
+                        socket.emit('give tax', ownPoints);
+                    }
+                });
+
+                socket.on('update total resources', function(data){
+                    $totalResources.empty();
+                    $totalResources.append('<li class="list-group-item">Total: <img src="./wood.png" alt="Wood" width="32" height="32"></img> : ' + data[0].totalWood + ' | <img src="./stone.png" alt="Stone" width="32" height="32"></img> : ' + data[0].totalStone + ' | <img src="./iron.png" alt="Iron" width="32" height="32"></img> : ' + data[0].totalIron + ' | <img src="./wheat.png" alt="Wheat" width="32" height="32"></img> : ' + data[0].totalWheat + '</li>');
+
+                });
+
+                socket.on('new message', function(data){
+                    $chat.append('<div class="well"><strong>' + data.user + '</strong>: ' + data.msg + '</div>');
+                    $chat.scrollTop(10000);
+                });
+
+                socket.on('refuse username', function(){
+                    alert("Username already in use!");               
+                });
+
+                socket.on('get users', function(data){
+                    var html = '';
+                    $users.html('');
+                    for(i = 0; i < data.length; i++){
+                        if(data[i] != $username.val()){
+                            html = '<li class="list-group-item">' + data[i] + ' <button id="btnTrade_' + data[i] + '" type="button" value="' + i + '">Trade</button>' + '</li>\n';
+                            $users.append(html);
+                            $('#btnTrade_' + data[i]).on('click', function(){
+                                $label_wood.html('<img src="./wood.png" alt="Wood" width="32" height="32"></img> (you have ' + ownWood + "):");
+                                $label_stone.html('<img src="./stone.png" alt="Stone" width="32" height="32"></img> (you have ' + ownStone + "):");
+                                $label_iron.html('<img src="./iron.png" alt="Iron" width="32" height="32"></img> (you have ' + ownIron + "):");
+                                $label_wheat.html('<img src="./wheat.png" alt="Wheat" width="32" height="32"></img> (you have ' + ownWheat + "):");
+                                $messageFormArea.hide();
+                                $sendOfferArea.show();
+                                $offerFormDestination.val($(this).val());
+                            });
+                        }
+                    }
+                });
+
+            });
+
+        </script>
+    </body>
+</html>
